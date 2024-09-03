@@ -814,9 +814,22 @@ class RdbgAdapterDescriptorFactory implements DebugAdapterDescriptorFactory, Ver
 		return useBundler;
 	}
 
+    quotePathIfNeeded(path: string): string {
+        // Pass through path if no spaces or already quoted
+        if (!path.includes(' ') || (path.startsWith('"') && path.endsWith('"')) || (path.startsWith("'") && path.endsWith("'"))) {
+            return path;
+        }
+        //  POSIX-like paths might be escaped with "\"'s if found, assume correct
+        if (process.platform !== 'win32' && (/\\ /g).test(path)) {
+            return path;
+        }
+        
+        return `"${path}"`;
+    }
+
 	async getExecCommands(config: LaunchConfiguration) {
 		const rubyCommand = config.command ? config.command : (this.useBundler(config) ? "bundle exec ruby" : "ruby");
-		const execArgs = config.script + " " + (config.args ? config.args.join(" ") : "");
+		const execArgs = this.quotePathIfNeeded(config.script) + " " + (config.args ? config.args.join(" ") : "");
 		let execCommand: string | undefined = rubyCommand + " " + execArgs;
 
 		if (config.askParameters) {
